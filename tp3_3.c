@@ -4,6 +4,7 @@
 #include <time.h>
 
 char *TiposProductos[] = {"Galletas", "Snack", "Cigarrillos", "Caramelos", "Bebidas"};
+
 struct Producto
 {
     int ProductoID;       // Numerado en ciclo iterativo
@@ -11,6 +12,7 @@ struct Producto
     char *TipoProducto;   // Algún valor del arreglo TiposProductos
     float PrecioUnitario; // entre 10 - 100
 } typedef Producto;
+
 struct Cliente
 {
     int ClienteID;               // Numerado en el ciclo iterativo
@@ -20,22 +22,20 @@ struct Cliente
 } typedef Cliente;
 
 int pedirClientes();
-Cliente cargarCliente(int id);
-void cargarProductos(Producto *productos, int tam);
-int costoProducto(Producto *temp);
+void cargarCliente(Cliente **lista, int tam);
+void cargarProductos(Producto **listado, int tam);
+float costoProducto(Producto *temp);
 void mostrarTodo(Cliente *listado, int tam);
-void imprimirProductos(Producto **listado, int tam);
+void imprimirProductos(Producto *listado, int tam);
 
 int main(int argc, char const *argv[])
 {
     srand(time(NULL));
     int clientes = pedirClientes();
-    Cliente listado[clientes];
-    for (int i = 0; i < clientes-1; i++)
-    {
-        listado[i] = cargarCliente(i); 
-    }
-    mostrarTodo(listado, clientes);
+    Cliente *listado; // intentar trabajar todo con dinamica
+    listado = (Cliente *)malloc(sizeof(Cliente) * clientes);
+    cargarCliente(&listado, clientes);
+    mostrarTodo(listado, clientes ); // no anda nada
     return 0;
 }
 
@@ -48,68 +48,70 @@ int pedirClientes()
     return clientes;
 }
 
-Cliente cargarCliente(int id)
+void cargarCliente(Cliente **lista, int tam)
 {
-    Cliente temp;
-    temp.ClienteID = id+1;
-    char *bufalo = malloc(sizeof(char) * 100);
-    fflush(stdin);
-    printf("\nIngrese el nombre del cliente %d: ", id+1);
-    gets(bufalo);
-    temp.NombreCliente = malloc(sizeof(char) * (strlen(bufalo) + 1));
-    strcpy(temp.NombreCliente, bufalo);
-    free(bufalo); // proceso caro
-    // hasta acá anda bien
-    temp.CantidadProductosAPedir = 1 + rand() % 5;
-    printf("cantidad: %d", temp.CantidadProductosAPedir);
-
-    Producto productos[temp.CantidadProductosAPedir]; // hacer malloc ??
-    cargarProductos(productos, temp.CantidadProductosAPedir);
-    // imprimir productos acá
-    return temp;
-}
-
-void cargarProductos(Producto *productos, int tam)
-{
-    // acá hay problemas
-    for (int i = 0; i < tam - 1; i++)
+    Cliente *temp = *lista;
+    for (int i = 0; i < tam; i++)
     {
-        Producto *temp = (productos + i);
-        temp->ProductoID = i;
-        temp->Cantidad = 1 + rand() % 10;
-        temp->TipoProducto = *(TiposProductos + (rand() % 5)); // puede acceder a los nombres???
-        temp->PrecioUnitario = 10 + rand() % 100;
+        temp->ClienteID = i;
+        char *bufalo = malloc(sizeof(char) * 100);
+        fflush(stdin);
+        printf("\nIngrese el nombre del cliente %d: ", temp->ClienteID);
+        gets(bufalo);
+        temp->NombreCliente = malloc(sizeof(char) * (strlen(bufalo) + 1));
+        strcpy(temp->NombreCliente, bufalo);
+        free(bufalo);
+        temp->CantidadProductosAPedir = 1 + rand() % 5;
+        temp->Productos = (Producto *)malloc(sizeof(Producto) * temp->CantidadProductosAPedir);
+        cargarProductos(&(temp->Productos), temp->CantidadProductosAPedir);
+        temp++;
     }
 }
 
-int costoProducto(Producto *temp)
+void cargarProductos(Producto **listado, int tam)
+{
+    Producto *temp = *listado;
+    for (int i = 0; i < tam; i++)
+    {
+        temp->ProductoID = i;
+        temp->Cantidad = 1 + rand() % 10;
+        int rando = rand() % 5;
+        temp->TipoProducto = malloc(sizeof(char) * (strlen(TiposProductos[rando]) + 1));
+        strcpy(temp->TipoProducto, TiposProductos[rando]);
+        temp->PrecioUnitario = 10 + rand() % 100;
+        temp++;
+    }
+}
+
+float costoProducto(Producto *temp) // no en uso
 {
     return temp->Cantidad * temp->PrecioUnitario;
 }
 
 void mostrarTodo(Cliente *listado, int tam)
 {
-    for (int i = 0; i < tam; i++)
+    Cliente *temp = listado;
+    for (int i = 0; i < tam ; i++)
     {
-        Cliente temp = listado[i];
-        printf("\n\n\n --------------  Cliente ID %d: ", temp.ClienteID);
-        printf("\n Nombre del Cliente: %s", temp.NombreCliente);
-        printf("\n Cantidad de productos pedidos: %d", temp.CantidadProductosAPedir);
-        int tamP = temp.CantidadProductosAPedir - 1;
-        imprimirProductos(&(temp.Productos), tamP);
+        printf("\n\n\n --------------  Cliente ID %d: ", temp->ClienteID);
+        printf("\n Nombre del Cliente: %s", temp->NombreCliente);
+        printf("\n Cantidad de productos pedidos: %d", temp->CantidadProductosAPedir);
+        imprimirProductos(temp->Productos, temp->CantidadProductosAPedir);
+        temp++;
     }
 }
 
-void imprimirProductos(Producto **listado, int tam)
+void imprimirProductos(Producto *listado, int tam)
 {
-    for (int i = 0; i < tam; i++)
+    Producto *temp = listado;
+    for (int i = 0; i < tam ; i++)
     {
-        printf("entraaaaaaaaaaa");
-        Producto *temp = *(listado + i);
-        printf("\n Producto ID: %d", temp->ProductoID);
-        printf("\n      Producto '%s': ", temp->TipoProducto);
-        printf("\n              %d unidades pedidas", temp->Cantidad);
-        printf("\n              %d precio por unidad", temp->PrecioUnitario);
-        printf("\n              %d costo total del pedido", costoProducto(temp));
+        printf("\n        Producto numero: %d", temp->ProductoID);
+        printf("\n        Tipo: %s", temp->TipoProducto);
+        printf("\n        Cantidad: %d", temp->Cantidad);
+        printf("\n        Precio unitario: %.2f", temp->PrecioUnitario);
+        printf("\n          Precio de la compra: %.2f", costoProducto(temp));
+        printf("\n");
+        temp++;
     }
 }
